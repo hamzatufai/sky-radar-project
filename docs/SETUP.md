@@ -1,52 +1,160 @@
-# Setup guide
+# Setup and AWS EC2 deployment guide
 
-## What you need
+## 1. What you need
 
 - Python 3.10 or newer
 - Internet connection
-- PowerShell on Windows, or a terminal on macOS/Linux
+- An OpenSky account only if you want authenticated API access
+- For cloud deployment: an AWS account, an EC2 key pair, and the GitHub repository URL
 
-## Windows setup
+## 2. Run locally on Windows
 
-Open PowerShell in the project folder and run:
+Open PowerShell in the project folder:
 
 ```powershell
 .\scripts\setup.ps1
-```
-
-This creates `.venv` and installs all packages.
-
-Activate the environment:
-
-```powershell
 .\.venv\Scripts\Activate.ps1
-```
-
-Create your local settings file:
-
-```powershell
 Copy-Item .env.example .env
-```
-
-Run the pipeline:
-
-```powershell
 python -m opensky_radar.pipeline
+python -m pytest
 ```
 
-## macOS/Linux setup
-
-```bash
-./scripts/setup.sh
-source .venv/bin/activate
-cp .env.example .env
-python -m opensky_radar.pipeline
-```
-
-## If PowerShell blocks the setup script
-
-Run this once for the current PowerShell window, then run the setup script again:
+If PowerShell blocks the script, run this once in the current PowerShell window and retry:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
+
+## 3. Run locally on macOS or Linux
+
+```bash
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+source .venv/bin/activate
+cp .env.example .env
+python -m opensky_radar.pipeline
+python -m pytest
+```
+
+## 4. Launch an Ubuntu EC2 instance
+
+In the AWS Console:
+
+1. Open **EC2** and choose **Launch instance**.
+2. Choose an **Ubuntu LTS** AMI.
+3. Choose a small instance suitable for a scheduled Python task, such as `t3.micro` where it is available.
+4. Create or select a key pair and download the `.pem` file safely.
+5. In the security group, allow inbound **SSH (TCP 22)** from **My IP** only. Do not open HTTP/HTTPS ports; this project is not a web server.
+6. Launch the instance and copy its public IPv4 DNS name or public IPv4 address.
+
+Stopping an EC2 instance stops instance-usage billing, but EBS storage can still have a charge. Terminating the instance deletes it permanently.
+
+## 5. Connect to EC2 from Windows
+
+In PowerShell, move to the folder containing your key, then connect. Replace the placeholders with your own values:
+
+```powershell
+ssh -i .\my-ec2-key.pem ubuntu@EC2_PUBLIC_DNS_OR_IP
+```
+
+If `ssh` is not available, install the Windows OpenSSH Client from Optional Features, then retry.
+
+## 6. Install the project on EC2
+
+Run these commands on the EC2 instance. Replace the repository URL if your repository address changes.
+
+```bash
+sudo apt update
+sudo apt install -y git python3 python3-venv
+git clone https://github.com/hamzatufai/sky-radar-project.git
+cd sky-radar-project
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+cp .env.example .env
+python3 -m opensky_radar.pipeline
+python3 -m pytest
+```
+
+The last two commands confirm that the pipeline runs and tests pass before scheduling it.
+
+## 7. Add OpenSky credentials on EC2 (optional)
+
+Only do this if you have OpenSky credentials. Do not commit this file to Git.
+
+```bash
+nano .env
+```
+
+Add your values:
+
+```text
+OPENSKY_USERNAME=your_username
+OPENSKY_PASSWORD=your_password
+REQUEST_TIMEOUT=30
+```
+
+Save with `Ctrl+O`, press `Enter`, then exit with `Ctrl+X`.
+
+## 8. Schedule the pipeline every hour
+
+Create the service file:
+
+```bash
+sudo nano /etc/systemd/system/opensky-radar.service
+```
+
+Paste this content. Change `/home/ubuntu/sky-radar-project` only if you cloned the project somewhere else.
+
+```ini
+[Unit]
+Description=OpenSky Radar data pipeline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/sky-radar-project
+ExecStart=/home/ubuntu/sky-radar-project/.venv/bin/python -m opensky_radar.pipeline
+```
+
+Create the timer file:
+
+```bash
+sudo nano /etc/systemd/system/opensky-radar.timer
+```
+
+Paste this content:
+
+```ini
+[Unit]
+Description=Run OpenSky Radar pipeline every hour
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable it and run it once now:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now opensky-radar.timer
+sudo systemctl start opensky-radar.service
+sudo systemctl status opensky-radar.service --no-pager
+systemctl list-timers opensky-radar.timer
+```
+
+## 9. Confirm EC2 output
+
+```bash
+cd ~/sky-radar-project
+ls -lh data/processed/aircraft_states.csv
+tail -n 20 logs/pipeline.log
+sudo journalctl -u opensky-radar.service -n 50 --no-pager
+```
+
+Continue with [COMMANDS.md](COMMANDS.md) for day-to-day local and EC2 commands.

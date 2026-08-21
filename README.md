@@ -26,6 +26,7 @@ open-skyradar/
 │   ├── COMMANDS.md               # Every project command
 │   └── SETUP.md                  # Installation guide
 ├── logs/                         # Run logs (kept local)
+├── opensky_radar/                # Local command entry point
 ├── scripts/
 │   ├── setup.ps1                 # Windows setup script
 │   └── setup.sh                  # macOS/Linux setup script
@@ -53,6 +54,8 @@ python -m opensky_radar.pipeline
 After the run, open `data/processed/aircraft_states.csv`.
 
 For all commands and detailed steps, read [docs/COMMANDS.md](docs/COMMANDS.md) and [docs/SETUP.md](docs/SETUP.md).
+
+For end-to-end AWS EC2 deployment (including an hourly schedule), follow [docs/SETUP.md](docs/SETUP.md).
 
 ## Important notes
 
