@@ -59,3 +59,5 @@ For all commands and detailed steps, read [docs/COMMANDS.md](docs/COMMANDS.md) a
 - The public OpenSky endpoint can limit requests. Wait a little and run again if it returns an error.
 - Do not put passwords or API secrets in the README. Use `.env` instead.
 - This starter project works without an OpenSky account. Add account details to `.env` only if you later need authenticated access.
+=======
+# sky-radar-project
