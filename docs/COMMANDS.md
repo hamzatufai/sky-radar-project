@@ -1,6 +1,6 @@
 # Project commands
 
-Run local commands from the project root folder. Run EC2 commands after you connect to the Ubuntu instance.
+Run local commands from the project root folder. Run EC2 commands after you connect to the Amazon Linux instance.
 
 ## Local commands
 
@@ -22,7 +22,7 @@ Replace `EC2_PUBLIC_DNS_OR_IP`, `my-ec2-key.pem`, and the project folder if your
 
 | Task | Command |
 | --- | --- |
-| Connect from Windows | `ssh -i .\my-ec2-key.pem ubuntu@EC2_PUBLIC_DNS_OR_IP` |
+| Connect from Windows | `ssh -i .\my-ec2-key.pem ec2-user@EC2_PUBLIC_DNS_OR_IP` |
 | Go to project | `cd ~/sky-radar-project` |
 | Install dependencies | `./scripts/setup.sh` |
 | Run once now | `.venv/bin/python -m opensky_radar.pipeline` |

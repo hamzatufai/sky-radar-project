@@ -2,7 +2,7 @@
 
 ## 1. What you need
 
-- Python 3.10 or newer
+- Python 3.9 or newer
 - Internet connection
 - An OpenSky account only if you want authenticated API access
 - For cloud deployment: an AWS account, an EC2 key pair, and the GitHub repository URL
@@ -36,12 +36,12 @@ python -m opensky_radar.pipeline
 python -m pytest
 ```
 
-## 4. Launch an Ubuntu EC2 instance
+## 4. Launch an Amazon Linux EC2 instance
 
 In the AWS Console:
 
 1. Open **EC2** and choose **Launch instance**.
-2. Choose an **Ubuntu LTS** AMI.
+2. Choose an **Amazon Linux 2023** AMI.
 3. Choose a small instance suitable for a scheduled Python task, such as `t3.micro` where it is available.
 4. Create or select a key pair and download the `.pem` file safely.
 5. In the security group, allow inbound **SSH (TCP 22)** from **My IP** only. Do not open HTTP/HTTPS ports; this project is not a web server.
@@ -54,7 +54,7 @@ Stopping an EC2 instance stops instance-usage billing, but EBS storage can still
 In PowerShell, move to the folder containing your key, then connect. Replace the placeholders with your own values:
 
 ```powershell
-ssh -i .\my-ec2-key.pem ubuntu@EC2_PUBLIC_DNS_OR_IP
+ssh -i .\my-ec2-key.pem ec2-user@EC2_PUBLIC_DNS_OR_IP
 ```
 
 If `ssh` is not available, install the Windows OpenSSH Client from Optional Features, then retry.
@@ -64,10 +64,11 @@ If `ssh` is not available, install the Windows OpenSSH Client from Optional Feat
 Run these commands on the EC2 instance. Replace the repository URL if your repository address changes.
 
 ```bash
-sudo apt update
-sudo apt install -y git python3 python3-venv
+sudo dnf update -y
+sudo dnf install -y git python3 python3-pip
 git clone https://github.com/hamzatufai/sky-radar-project.git
 cd sky-radar-project
+python3 -m venv .venv
 chmod +x scripts/setup.sh
 ./scripts/setup.sh
 cp .env.example .env
@@ -76,6 +77,26 @@ python3 -m pytest
 ```
 
 The last two commands confirm that the pipeline runs and tests pass before scheduling it.
+
+### Repair an existing Amazon Linux EC2 installation
+
+If your instance shows `TypeError: unsupported operand type(s) for |`, it is using Python 3.9 with an older copy of this project. Update the project after you have pushed the Python 3.9 compatibility fix to GitHub:
+
+```bash
+cd ~/sky-radar-project
+git pull --ff-only
+./scripts/setup.sh
+.venv/bin/python -m opensky_radar.pipeline
+```
+
+The project is compatible with Python 3.9 and newer after this update.
+
+For an existing **Amazon Linux 2** instance, use `yum` instead of `dnf` when installing system packages:
+
+```bash
+sudo yum update -y
+sudo yum install -y git python3 python3-pip
+```
 
 ## 7. Add OpenSky credentials on EC2 (optional)
 
@@ -103,7 +124,7 @@ Create the service file:
 sudo nano /etc/systemd/system/opensky-radar.service
 ```
 
-Paste this content. Change `/home/ubuntu/sky-radar-project` only if you cloned the project somewhere else.
+Paste this content. Change `/home/ec2-user/sky-radar-project` only if you cloned the project somewhere else.
 
 ```ini
 [Unit]
@@ -113,9 +134,9 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=ubuntu
-WorkingDirectory=/home/ubuntu/sky-radar-project
-ExecStart=/home/ubuntu/sky-radar-project/.venv/bin/python -m opensky_radar.pipeline
+User=ec2-user
+WorkingDirectory=/home/ec2-user/sky-radar-project
+ExecStart=/home/ec2-user/sky-radar-project/.venv/bin/python -m opensky_radar.pipeline
 ```
 
 Create the timer file:

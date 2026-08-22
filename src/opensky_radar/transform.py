@@ -1,12 +1,13 @@
 """Turn OpenSky state vectors into clear dictionary records."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import Optional
 
 
-def _utc_time(timestamp: object) -> str | None:
+def _utc_time(timestamp: object) -> Optional[str]:
     if timestamp is None:
         return None
-    return datetime.fromtimestamp(float(timestamp), UTC).isoformat()
+    return datetime.fromtimestamp(float(timestamp), timezone.utc).isoformat()
 
 
 def clean_aircraft_states(states: list[list[object]]) -> list[dict[str, object]]:
